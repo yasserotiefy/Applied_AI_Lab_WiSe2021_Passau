@@ -133,4 +133,6 @@ data/
 eval/
 test/
 train/
+sample_train/
 pipeline/
+dask-worker-space/
