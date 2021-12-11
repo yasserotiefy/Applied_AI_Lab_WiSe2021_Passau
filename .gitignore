@@ -136,3 +136,5 @@ train/
 sample_train/
 pipeline/
 dask-worker-space/
+testA/
+testB/
