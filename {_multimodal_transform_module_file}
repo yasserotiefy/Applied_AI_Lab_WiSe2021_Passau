@@ -21,19 +21,21 @@ def preprocessing_fn(inputs):
     ### Decode boxes BYTES to tensor
 
     boxes = inputs[_IMAGE[3]]
-    # boxes = tf.strings.regex_replace(boxes, pattern="\+", rewrite="-", replace_global=False)
-    # boxes = tf.strings.regex_replace(boxes, pattern="/", rewrite="_", replace_global=False)
-    # boxes = tf.io.decode_base64(boxes)
+    boxes = tf.strings.regex_replace(boxes, pattern="\+", rewrite="-", replace_global=False)
+    boxes = tf.strings.regex_replace(boxes, pattern="/", rewrite="_", replace_global=False)
+    boxes = tf.io.decode_base64(boxes)
     # boxes = tf.io.decode_proto(boxes, tf.io.VarLenFeature(tf.string))
     # boxes = tf.image.decode_image(boxes)
-    boxes = tf.io.decode_raw(boxes, tf.float32)
+    # boxes = tf.io.decode_raw(boxes, tf.float32)
     # print(boxes.shape)
-    # boxes = tf.reshape(boxes, [30, 4])
+    # boxes = tf.reshape(boxes, [-1, 4])
     # boxes = tf.RaggedTensor.from_tensor(boxes, ragged_rank=2)
     # boxes = tf.reshape(boxes, [None,4])
     # print(boxes)
     features_dict[_transformed_name(_IMAGE[3])] = boxes
 
+    # boxes = tf.frombuffer(tf.io.decode_raw(boxes, tf.float32))
+    # print(boxes)
     # y = tf.io.decode_base64(inputs[_IMAGE[3]])
     # z = tf.compat.bytes_or_text_types(inputs[_IMAGE[3]])
     
