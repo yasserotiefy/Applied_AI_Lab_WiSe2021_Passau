@@ -138,3 +138,7 @@ pipeline/
 dask-worker-space/
 testA/
 testB/
+
+# model
+*.h5
+*.npy
