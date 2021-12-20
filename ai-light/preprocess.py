@@ -72,33 +72,33 @@ if __name__ == '__main__':
 
 
     
-    val = pd.read_csv(VAL_PATH,sep='\t')
-    val['boxes_convert'] = val.apply(lambda x: convertBoxes(x['num_boxes'], x['boxes']), axis=1)
-    val['feature_convert'] = val.apply(lambda x: convertFeature(x['num_boxes'], x['features']), axis=1)
-    val['labels_convert'] = val.apply(lambda x: convertLabel(x['num_boxes'], x['class_labels']), axis=1)
-    val['label_words'] = val.apply(lambda x: convertLabelWord(x['num_boxes'], x['class_labels']), axis=1)
-    val['pos'] = val.apply(lambda x: convertPos(x['num_boxes'], x['boxes_convert'], x['image_h'], x['image_w']), axis=1)
+    # val = pd.read_csv(VAL_PATH,sep='\t')
+    # val['boxes_convert'] = val.apply(lambda x: convertBoxes(x['num_boxes'], x['boxes']), axis=1)
+    # val['feature_convert'] = val.apply(lambda x: convertFeature(x['num_boxes'], x['features']), axis=1)
+    # val['labels_convert'] = val.apply(lambda x: convertLabel(x['num_boxes'], x['class_labels']), axis=1)
+    # val['label_words'] = val.apply(lambda x: convertLabelWord(x['num_boxes'], x['class_labels']), axis=1)
+    # val['pos'] = val.apply(lambda x: convertPos(x['num_boxes'], x['boxes_convert'], x['image_h'], x['image_w']), axis=1)
 
-    del val['boxes'], val['features'], val['class_labels']
-    val.to_pickle('data/val_data.pkl')            
+    # del val['boxes'], val['features'], val['class_labels']
+    # val.to_pickle('data/val_data.pkl')            
 
-    test = pd.read_csv(TESTA_PATH,sep='\t')
-    test['boxes_convert'] = test.apply(lambda x: convertBoxes(x['num_boxes'], x['boxes']), axis=1)
-    test['feature_convert'] = test.apply(lambda x: convertFeature(x['num_boxes'], x['features']), axis=1)
-    test['labels_convert'] = test.apply(lambda x: convertLabel(x['num_boxes'], x['class_labels']), axis=1)
-    test['label_words'] = test.apply(lambda x: convertLabelWord(x['num_boxes'], x['class_labels']), axis=1)
-    test['pos'] = test.apply(lambda x: convertPos(x['num_boxes'], x['boxes_convert'], x['image_h'], x['image_w']), axis=1)
+    # test = pd.read_csv(TESTA_PATH,sep='\t')
+    # test['boxes_convert'] = test.apply(lambda x: convertBoxes(x['num_boxes'], x['boxes']), axis=1)
+    # test['feature_convert'] = test.apply(lambda x: convertFeature(x['num_boxes'], x['features']), axis=1)
+    # test['labels_convert'] = test.apply(lambda x: convertLabel(x['num_boxes'], x['class_labels']), axis=1)
+    # test['label_words'] = test.apply(lambda x: convertLabelWord(x['num_boxes'], x['class_labels']), axis=1)
+    # test['pos'] = test.apply(lambda x: convertPos(x['num_boxes'], x['boxes_convert'], x['image_h'], x['image_w']), axis=1)
 
-    del test['boxes'], test['features'], test['class_labels']
-    test.to_pickle('data/testA_data.pkl')
+    # del test['boxes'], test['features'], test['class_labels']
+    # test.to_pickle('data/testA_data.pkl')
 
 
-    test = pd.read_csv(TESTB_PATH,sep='\t')
-    test['boxes_convert'] = test.apply(lambda x: convertBoxes(x['num_boxes'], x['boxes']), axis=1)
-    test['feature_convert'] = test.apply(lambda x: convertFeature(x['num_boxes'], x['features']), axis=1)
-    test['labels_convert'] = test.apply(lambda x: convertLabel(x['num_boxes'], x['class_labels']), axis=1)
-    test['label_words'] = test.apply(lambda x: convertLabelWord(x['num_boxes'], x['class_labels']), axis=1)
-    test['pos'] = test.apply(lambda x: convertPos(x['num_boxes'], x['boxes_convert'], x['image_h'], x['image_w']), axis=1)
+    # test = pd.read_csv(TESTB_PATH,sep='\t')
+    # test['boxes_convert'] = test.apply(lambda x: convertBoxes(x['num_boxes'], x['boxes']), axis=1)
+    # test['feature_convert'] = test.apply(lambda x: convertFeature(x['num_boxes'], x['features']), axis=1)
+    # test['labels_convert'] = test.apply(lambda x: convertLabel(x['num_boxes'], x['class_labels']), axis=1)
+    # test['label_words'] = test.apply(lambda x: convertLabelWord(x['num_boxes'], x['class_labels']), axis=1)
+    # test['pos'] = test.apply(lambda x: convertPos(x['num_boxes'], x['boxes_convert'], x['image_h'], x['image_w']), axis=1)
     
-    del test['boxes'], test['features'], test['class_labels']
-    test.to_pickle('data/testB_data.pkl')
+    # del test['boxes'], test['features'], test['class_labels']
+    # test.to_pickle('data/testB_data.pkl')
