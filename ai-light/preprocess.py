@@ -50,7 +50,7 @@ def convertPos(num_boxes, boxes, H, W):
     return pos_list
 if __name__ == '__main__':
     # 1000000 examples
-    train = pd.read_csv(TRAIN_PATH,sep='\t', chunksize=100000, nrows = 1000000, quoting=csv.QUOTE_NONE)
+    train = pd.read_csv(TRAIN_PATH,sep='\t', chunksize=100000, nrows = 20000, quoting=csv.QUOTE_NONE)
     LEN = 0
     product_set = set()
     num_boxes_list = []
@@ -99,7 +99,7 @@ if __name__ == '__main__':
                         'pos':pos_list,
                         })
     print(data.head(10))
-    with open('data/1M_data.pkl', 'wb') as outp:
+    with open('data/sample_val.pkl', 'wb') as outp:
         joblib.dump(data, outp)
     print("1M examples finish")
 
