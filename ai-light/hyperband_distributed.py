@@ -63,7 +63,7 @@ LABEL_PATH = '/root/Applied_AI_Lab_WiSe2021_Passau/ai-light/data/multimodal_labe
 
 MAX_EPOCH = 20
 MAX_LEN = 10
-B_SIZE = 256
+B_SIZE = 64
 FOLD_IDS = [-1]
 FOLD_NUM = 20
 THRE = 0.5
@@ -692,7 +692,7 @@ def build_model(hp):
                           inp_image, inp_image_mask,
                           inp_pos, inp_image_char], outputs=[output])#
     hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
-    model.compile(optimizer=tf.compat.v1.keras.optimizers.Adam(learning_rate=hp_learning_rate), loss={
+    model.compile(optimizer=Adam(learning_rate=hp_learning_rate), loss={
                 'output': 'sparse_categorical_crossentropy'
             }, metrics=['accuracy'])
 
@@ -700,8 +700,16 @@ def build_model(hp):
     return model
 
 
-# In[11]:
+# from tensorflow.compat.v1 import ConfigProto
+# from tensorflow.compat.v1 import InteractiveSession
 
+# config = ConfigProto()
+# config.gpu_options.allow_growth = True
+# session = InteractiveSession(config=config)
+
+
+# physical_devices = tf.compat.v1.config.list_physical_devices('GPU') # 8 GPUs in my setup
+# tf.compat.v1.config.set_visible_devices(physical_devices, 'GPU') # Using all GPUs (default behaviour)
 
 tuner = kt.Hyperband(build_model,
                      objective=kt.Objective("val_accuracy", direction="max"),
@@ -709,20 +717,16 @@ tuner = kt.Hyperband(build_model,
                      factor=3,
                      directory='hyperparameter_tuning',
                      project_name='multimodal_hyperparameter_tuning',
-                     distribution_strategy=tf.distribute.MirroredStrategy())
+                     overwrite=True,
+                     distribution_strategy=tf.compat.v1.distribute.experimental.MultiWorkerMirroredStrategy())
 
 
-# In[12]:
 
-
-stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
+stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_acc', patience=5)
 log_dir = "logs/multimodal_hpram_tuning/"
 tensorboard_callback = tf.compat.v1.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
 
-# In[13]:
-
-
-tuner.search(train_D.__iter__(), epochs=50, validation_data=val_D.__iter__(), callbacks=[stop_early])
+tuner.search(train_D.__iter__(), epochs=50, validation_data=val_D.__iter__(), callbacks=[stop_early, tensorboard_callback])
 
 
