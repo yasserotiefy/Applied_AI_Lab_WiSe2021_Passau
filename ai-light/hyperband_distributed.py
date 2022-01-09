@@ -29,10 +29,6 @@ import keras
 # from keras_bert.bert import get_model
 from keras_bert.loader import load_trained_model_from_checkpoint
 from keras_bert import AdamWarmup, calc_train_steps
-# from keras.engine import Layer
-# from keras.engine import InputSpec
-# from keras.objectives import categorical_crossentropy
-# from keras.objectives import sparse_categorical_crossentropy
 from keras import activations, initializers, regularizers, constraints
 from keras.models import Model
 # from tqdm import tqdm
@@ -45,17 +41,7 @@ from eval import read_submission, get_ndcg
 from tqdm import tqdm, trange
 import pickle
 import dask.dataframe as dd
-# import joblib
 
-# config = tf.compat.v1.ConfigProto()
-# config.gpu_options.allow_growth=True #不全部占满显存, 按需分配
-# sess = tf.compat.v1.Session(config=config)
-# tf.compat.v1.keras.backend.set_session(sess)
-
-# tf.compat.v1.keras.backend.clear_session()
-# gpus = tf.config.list_physical_devices('GPU')
-# print(gpus)
-# mirrored_strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
 
 BERT_PRETRAINED_DIR = "/root/Applied_AI_Lab_WiSe2021_Passau/ai-light/data/uncased_L-12_H-768_A-12"
 VAL_ANS_PATH = '/root/Applied_AI_Lab_WiSe2021_Passau/ai-light/data/valid_answer.json'
@@ -95,8 +81,6 @@ cfg["accum_step"] = ACCUM_STEP
 cfg["cls_num"] = 2
 cfg["raw_filename"] = "{}_{}oof{}"
 
-
-# In[2]:
 
 
 def get_vocab():
@@ -645,7 +629,9 @@ def build_model(hp):
     mask = Lambda(lambda x: K.cast(K.not_equal(x, cfg["x_pad"]), 'float32'), name="token_mask")(inp_token1)
     word_embed = embed_layer(inp_token1)
     word_embed = Lambda(lambda x: x[0] * K.expand_dims(x[1], axis=-1))([word_embed, mask])
-    word_embed = Bidirectional(LSTM(cfg["unit1_1"], return_sequences=True), merge_mode="sum")(word_embed)
+    
+    hp_units_lstm = hp.Int('units', min_value=64, max_value=512, step=32)
+    word_embed = Bidirectional(LSTM(hp_units_lstm, return_sequences=True), merge_mode="sum")(word_embed)
     word_embed = BatchNormalization()(word_embed)
     # word_embed = Dropout(0.3)(word_embed)
     word_embed = Lambda(lambda x: x[0] * K.expand_dims(x[1], axis=-1))([word_embed, mask])
@@ -655,22 +641,30 @@ def build_model(hp):
     text_pool = Lambda(lambda x: x[:, 0, :])(word_embed)
 
     # Share weights of character-level embedding for premise and hypothesis
+    hp_units_filter = hp.Int('units', min_value=64, max_value=512, step=32)
+    hp_units_filter_size = hp.Int('units', min_value=3, max_value=12, step=2)
     character_embedding_layer = TimeDistributed(Sequential([
         embed_layer,
         # Embedding(input_dim=100, output_dim=char_embedding_size, input_length=chars_per_word),
-        Conv1D(filters=128, kernel_size=3, name="char_embed_conv1d"),
+        Conv1D(filters=hp_units_filter, kernel_size=hp_units_filter_size, padding='same', name="char_embed_conv1d"),
         GlobalMaxPooling1D()
     ]), name='CharEmbedding')
     character_embedding_layer.build(input_shape=(None, None, cfg["max_char"]))
     image_char_embed  = character_embedding_layer(inp_image_char)    
-    image_embed = Concatenate(axis=-1)([image_char_embed, inp_image])    
-    image_embed = Dense(256, activation='relu', name='image_embed')(image_embed)
+    image_embed = Concatenate(axis=-1)([image_char_embed, inp_image])
+    hp_units0 = hp.Int('units', min_value=64, max_value=2048, step=32)
+    image_embed = Dense(hp_units0, name='image_embed')(image_embed)
     image_embed = Lambda(lambda x: x[0] * K.expand_dims(x[1], axis=-1))([image_embed, inp_image_mask])
-    pos_embed = Dense(256, activation='relu', name='pos_embed')(inp_pos)
+
+
+    hp_units = hp.Int('units', min_value=64, max_value=2048, step=32)
+    hp_activation = hp.Choice('activation', values=['relu', 'tanh', 'sigmoid', 'selu', 'elu'])
+    pos_embed = Dense(hp_units, activation=hp_activation, name='pos_embed')(inp_pos)
     pos_embed = Lambda(lambda x: x[0] * K.expand_dims(x[1], axis=-1))([pos_embed, inp_image_mask])
     embed = Add()([image_embed , pos_embed]) # batch, maxlen(10), 1024+128
     
-    image_embed = Bidirectional(LSTM(512, return_sequences=True), merge_mode="sum")(embed)
+    hp_units_lstm0 = hp.Int('units', min_value=64, max_value=512, step=32)
+    image_embed = Bidirectional(LSTM(hp_units_lstm0, return_sequences=True), merge_mode="sum")(embed)
     image_embed = BatchNormalization()(image_embed)
     image_embed = Lambda(lambda x: x[0] * K.expand_dims(x[1], axis=-1))([image_embed, inp_image_mask])
     
@@ -679,19 +673,23 @@ def build_model(hp):
     pool = Concatenate(axis=-1)([image_pool, text_pool])
 
     hp_units = hp.Int('units', min_value=64, max_value=2048, step=32)
-    hp_activation = hp.Choice('activation', values=['relu', 'tanh', 'sigmoid', 'leakyrelu'])
-    pool = Dense(hp_units, activation=hp_activation)(pool)
+    hp_activation = hp.Choice('activation', values=['relu', 'tanh', 'sigmoid', 'selu', 'elu'])
     hp_dropout_prop = hp.Choice('dropout_prop', values=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
+    pool = Dense(hp_units, activation=hp_activation)(pool)
     pool = Dropout(hp_dropout_prop)(pool)
-    pool = Dense(hp_units, activation=hp_activation)(pool)
-    pool = Dense(hp_units, activation=hp_activation)(pool)
+    hp_units1 = hp.Int('units', min_value=64, max_value=2048, step=32)
+    hp_activation1 = hp.Choice('activation', values=['relu', 'tanh', 'sigmoid', 'selu', 'elu'])
+    pool = Dense(hp_units1, activation=hp_activation1)(pool)
+    hp_units2 = hp.Int('units', min_value=64, max_value=2048, step=32)
+    hp_activation2 = hp.Choice('activation', values=['relu', 'tanh', 'sigmoid', 'selu', 'elu'])
+    pool = Dense(hp_units2, activation=hp_activation2)(pool)
     
     output = Dense(2, activation='softmax', name='output')(pool)
 
     model = Model(inputs=[inp_token1, inp_segm1, 
                           inp_image, inp_image_mask,
                           inp_pos, inp_image_char], outputs=[output])#
-    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
+    hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4, 1e-5])
     model.compile(optimizer=Adam(learning_rate=hp_learning_rate), loss={
                 'output': 'sparse_categorical_crossentropy'
             }, metrics=['accuracy'])
@@ -700,33 +698,46 @@ def build_model(hp):
     return model
 
 
-# from tensorflow.compat.v1 import ConfigProto
-# from tensorflow.compat.v1 import InteractiveSession
-
-# config = ConfigProto()
-# config.gpu_options.allow_growth = True
-# session = InteractiveSession(config=config)
-
-
-# physical_devices = tf.compat.v1.config.list_physical_devices('GPU') # 8 GPUs in my setup
-# tf.compat.v1.config.set_visible_devices(physical_devices, 'GPU') # Using all GPUs (default behaviour)
 
 tuner = kt.Hyperband(build_model,
                      objective=kt.Objective("val_accuracy", direction="max"),
                      max_epochs=20,
                      factor=3,
-                     directory='hyperparameter_tuning',
-                     project_name='multimodal_hyperparameter_tuning',
+                     directory='tmp/hyperband_hyperparameter_tuning',
+                     project_name='multimodal_hyperband_hyperparameter_tuning',
                      overwrite=True,
                      distribution_strategy=tf.compat.v1.distribute.experimental.MultiWorkerMirroredStrategy())
 
+# Wrap data in Dataset objects.
+output_signature=(
+         tf.TensorSpec(shape=(None, None), dtype=tf.float16),
+         tf.TensorSpec(shape=(None, None), dtype=tf.float16),
+         tf.TensorSpec(shape=(5, 2048), dtype=tf.float16),
+         tf.TensorSpec(shape=(5), dtype=tf.float16),
+         tf.TensorSpec(shape=(None, 5), dtype=tf.float16),
+         tf.TensorSpec(shape=(None, 5), dtype=tf.float16),
+         tf.TensorSpec(shape=(), dtype=tf.float16))
+train_data = tf.data.Dataset.from_generator(train_D.__iter__, output_signature=output_signature)
+val_data = tf.data.Dataset.from_generator(val_D.__iter__, output_signature=output_signature)
+
+# The batch size must now be set on the Dataset objects.
+batch_size = 32
+train_data = train_data.batch(batch_size)
+val_data = val_data.batch(batch_size)
+
+# Disable AutoShard.
+options = tf.data.Options()
+options.experimental_distribute.auto_shard_policy = tf.data.experimental.AutoShardPolicy.OFF
+train_data = train_data.with_options(options)
+val_data = val_data.with_options(options)
 
 
-stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_acc', patience=5)
-log_dir = "logs/multimodal_hpram_tuning/"
-tensorboard_callback = tf.compat.v1.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+stop_early = keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=5)
+log_dir = "tmp/hparam_hyperband_logs"
+tensorboard_callback = keras.callbacks.TensorBoard(log_dir=log_dir)
 
-
-tuner.search(train_D.__iter__(), epochs=50, validation_data=val_D.__iter__(), callbacks=[stop_early, tensorboard_callback])
+tuner.search(train_data, epochs=20, validation_data=val_data, callbacks=[stop_early, tensorboard_callback],
+            # batch_size=64, steps_per_epoch=len(train_D)//4, validation_steps=len(val_D)//4
+            )
 
 
