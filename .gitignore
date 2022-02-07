@@ -144,3 +144,4 @@ testB/
 *.npy
 
 trial_*
+*.pkl
